@@ -5,17 +5,14 @@ AWS.config.update({region: REGION});
 
 const ddb = new AWS.DynamoDB({apiVersion: "2012-08-10"});
 
-const putItemToDDB = async () => {
+const putItemToDDB = async (message) => {
   const params = {
     Item: {
       UserId: {
-        N: "1"
+        N: message.id
       },
       Label: {
-        S: "green"
-      },
-      Filename: {
-        S: "cute_cat.png"
+        S: message.label
       }
     },
     TableName: process.env.TABLE_NAME
