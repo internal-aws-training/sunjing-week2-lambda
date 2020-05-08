@@ -9,7 +9,7 @@ const putItemToDDB = async () => {
   const params = {
     Item: {
       UserId: {
-        N: 1
+        N: "1"
       },
       Label: {
         S: "green"
@@ -28,6 +28,28 @@ const putItemToDDB = async () => {
   }
 };
 
+const getItemFromDDB = async () => {
+  const params = {
+    Key: {
+      UserId: {
+        N: "1"
+      },
+      Label: {
+        S: "green"
+      }
+    },
+    TableName: process.env.TABLE_NAME
+  };
+
+  try {
+    const a = await ddb.getItem(params).promise()
+    console.log(33 ,a);
+  } catch (e) {
+    throw new Error("get item into dynamodb table failed", e.message);
+  }
+};
+
 module.exports = {
-  putItemToDDB
+  putItemToDDB,
+  getItemFromDDB
 };
