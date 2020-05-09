@@ -1,23 +1,31 @@
 Parameters:
-  S3BucketNameForEventLambdaCode:
+  S3BucketNameForLambdaCode:
     Type: String
     Default: lambda-code-hello-word
-    Description: The s3 bucket which contain lambda code
+    Description: The s3 bucket which contain event lambda code
   S3BucketObjectKeyForEventLambdaCode:
     Type: String
-    Default: hello-world.zip
+    Default: hello-world-event.zip
     Description: The s3 bucket which contain lambda code
+  S3BucketObjectKeyForApiLambdaCode:
+    Type: String
+    Default: hello-world-api.zip
+    Description: The s3 bucket which contain api lambda code
   EventLambdaLogGroupName:
     Type: String
     Default: hello-world-lambda-log-group
     Description: The log group for event lambda
+  ApiLambdaLogGroupName:
+    Type: String
+    Default: hello-world-api-lambda-log-group
+    Description: The log group for api lambda
 
 Resources:
   MyEventLambda:
     Type: AWS::Lambda::Function
     Properties:
       Code:
-        S3Bucket: !Ref S3BucketNameForEventLambdaCode
+        S3Bucket: !Ref S3BucketNameForLambdaCode
         S3Key: !Ref S3BucketObjectKeyForEventLambdaCode
       Handler: "index.handler"
       Role:  !GetAtt EventLambdaExecutionRole.Arn
@@ -99,3 +107,95 @@ Resources:
       Principal: sns.amazonaws.com
       SourceArn: !Ref MySNSTopic
       FunctionName: !Ref MyEventLambda
+
+  MyApiLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        S3Bucket: !Ref S3BucketNameForLambdaCode
+        S3Key: !Ref S3BucketObjectKeyForApiLambdaCode
+      Handler: "index.handler"
+      Role:  !GetAtt ApiLambdaExecutionRole.Arn
+      Runtime: "nodejs12.x"
+      Timeout: 900
+      Environment:
+        Variables:
+          TABLE_NAME: !Select [1, !Split ['/', !GetAtt MyDynamoDBTable.Arn]]
+          REGION: !Ref AWS::Region
+
+  ApiLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: hello-world-api-lambda-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                  - dynamodb:GetItem
+                Resource:
+                  - arn:aws:logs:*:*:log-group:/aws/lambda/*:*
+                  - !GetAtt MyDynamoDBTable.Arn
+
+  ApiLambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    DependsOn: MyApiLambda
+    Properties:
+      LogGroupName: !Ref ApiLambdaLogGroupName
+      RetentionInDays: 30
+
+  MyRestApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: MyRestAPI
+      Parameters:
+        endpointConfigurationTypes: REGIONAL
+
+  ApiGatewayResource:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyRestApi
+      ParentId: !GetAtt MyRestApi.RootResourceId
+      PathPart: user
+
+  ApiGatewayResourceUser:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      RestApiId: !Ref MyRestApi
+      ParentId: !Ref ApiGatewayResource
+      PathPart: "{id+}"
+
+  ApiGatewayMethod:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: GET
+      ResourceId: !Ref ApiGatewayResourceUser
+      RestApiId: !Ref MyRestApi
+      Integration:
+        IntegrationHttpMethod: POST
+        Type: AWS
+        Uri: !Sub
+          - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
+          - lambdaArn: !GetAtt MyApiLambda.Arn
+
+  lambdaApiGatewayInvoke:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !GetAtt MyApiLambda.Arn
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub
+              - arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${apiGateway}/*
+              - apiGateway: !Ref MyRestApi
