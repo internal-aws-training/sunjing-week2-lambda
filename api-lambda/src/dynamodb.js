@@ -25,14 +25,14 @@ const putItemToDDB = async (message) => {
   }
 };
 
-const getItemFromDDB = async () => {
+const getItemFromDDB = async (input) => {
   const params = {
     Key: {
       UserId: {
-        N: "1"
+        N: input.id
       },
       Label: {
-        S: "green"
+        S: input.label
       }
     },
     TableName: process.env.TABLE_NAME

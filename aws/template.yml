@@ -183,12 +183,36 @@ Resources:
       HttpMethod: GET
       ResourceId: !Ref ApiGatewayResourceUser
       RestApiId: !Ref MyRestApi
+      RequestParameters:
+        method.request.path.id: true
+        method.request.querystring.label: true
       Integration:
         IntegrationHttpMethod: POST
         Type: AWS
         Uri: !Sub
           - arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${lambdaArn}/invocations
           - lambdaArn: !GetAtt MyApiLambda.Arn
+        PassthroughBehavior: WHEN_NO_TEMPLATES
+        RequestParameters:
+          integration.request.path.id: method.request.path.id
+          integration.request.querystring.label: method.request.querystring.label
+        RequestTemplates:
+          application/json: !Join
+            - ''
+            -
+              - "{"
+              - "\"id\": $input.params('id'),"
+              - "\"label\": \"$input.params('label')\""
+              - "}"
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseTemplates: {"application/json": "$input.json('$.body')"}
+          - StatusCode: 400
+            SelectionPattern: ".*"
+            ResponseTemplates: {"application/json": "$input.json('$.errorMessage')"}
+      MethodResponses:
+        - StatusCode: 200
+        - StatusCode: 400
 
   lambdaApiGatewayInvoke:
     Type: AWS::Lambda::Permission
