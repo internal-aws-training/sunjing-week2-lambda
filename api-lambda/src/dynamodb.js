@@ -29,7 +29,7 @@ const getItemFromDDB = async (input) => {
   const params = {
     Key: {
       UserId: {
-        N: input.id
+        N: String(input.id)
       },
       Label: {
         S: input.label
@@ -39,8 +39,7 @@ const getItemFromDDB = async (input) => {
   };
 
   try {
-    const a = await ddb.getItem(params).promise()
-    console.log(33 ,a);
+    return await ddb.getItem(params).promise()
   } catch (e) {
     throw new Error("get item into dynamodb table failed", e.message);
   }

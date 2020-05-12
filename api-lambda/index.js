@@ -6,12 +6,12 @@ exports.handler =  async function(event, context) {
     const input = {
       id: event.id,
       label: event.label
-    }
+    };
     const result = await getItemFromDDB(input);
     if(event.label=="red")
-      return {status: 400, errorMessage: "oh no! error"}
+      return {status: 400, body: "oh no! error"};
     else {
-      return {status: 200, body: result}
+      return {status: 200, body: JSON.stringify(result)};
     }
   } catch (e) {
     throw e;

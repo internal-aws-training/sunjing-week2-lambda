@@ -208,8 +208,8 @@ Resources:
           - StatusCode: 200
             ResponseTemplates: {"application/json": "$input.json('$.body')"}
           - StatusCode: 400
-            SelectionPattern: ".*"
-            ResponseTemplates: {"application/json": "$input.json('$.errorMessage')"}
+            SelectionPattern: 400
+            ResponseTemplates: {"application/json": "$input.json('$.body')"}
       MethodResponses:
         - StatusCode: 200
         - StatusCode: 400
