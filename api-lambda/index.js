@@ -9,9 +9,9 @@ exports.handler =  async function(event, context) {
     };
     const result = await getItemFromDDB(input);
     if(event.label=="red")
-      return {status: 400, body: "oh no! error"};
+      return {statusCode: 400, body: "oh no! error"};
     else {
-      return {status: 200, body: JSON.stringify(result)};
+      return {statusCode: 200, body: JSON.stringify(result)};
     }
   } catch (e) {
     throw e;
