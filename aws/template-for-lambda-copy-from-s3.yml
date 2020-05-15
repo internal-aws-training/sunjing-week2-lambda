@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Lambda to copy file to S3 from another S3
+Parameters:
+  S3BucketNameForOrigin:
+    Type: String
+    Default: sj-original-bucket
+  S3BucketNameForDestination:
+    Type: String
+    Default: sj-destination-bucket
+  LambdaName:
+    Type: String
+    Default: sj-lambda
+  LambdaLogGroupName:
+    Type: String
+    Default: sj-lambda-log-group
+
+Resources:
+  S3BucketOrigin:
+    Type: AWS::S3::Bucket
+    DependsOn:
+      - ProcessingLambdaPermission
+    Properties:
+      BucketName: !Ref S3BucketNameForOrigin
+      AccessControl: PublicReadWrite
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt LambdaFunction.Arn
+            Filter:
+              S3Key:
+                Rules:
+                - Name: suffix
+                  Value: .txt
+
+  ProcessingLambdaPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !Sub arn:aws:s3:::${S3BucketNameForOrigin}
+      SourceAccount: !Ref AWS::AccountId
+
+  S3BucketDest:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketNameForDestination
+      AccessControl: PublicReadWrite
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile: >
+          const AWS = require("aws-sdk");
+          const s3 = new AWS.S3();
+
+          exports.handler = async (event, context) =>{
+            console.log(JSON.stringify(event));
+
+            const readParams = {
+              Bucket: event.Records[0].s3.bucket.name,
+              Key: event.Records[0].s3.object.key
+            };
+
+            const data = await s3.getObject(readParams).promise();
+            console.log(data.Body);
+
+            const writeParams = {
+              Bucket: "sj-destination-bucket",
+              Key: event.Records[0].s3.object.key,
+              Body: data.Body
+            };
+
+            return await s3.putObject(writeParams).promise();
+          };
+      Handler: index.handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Runtime: "nodejs12.x"
+      Timeout: 900
+
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: lambda.amazonaws.com
+      Policies:
+        - PolicyName: lambda-policy-log
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource:
+                  - arn:aws:logs:*:*:log-group:/aws/lambda/*:*
+        - PolicyName: lambda-policy-s3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                Resource:
+                  - !Sub arn:aws:s3:::${S3BucketNameForOrigin}/*
+                  - !Sub arn:aws:s3:::${S3BucketNameForDestination}/*
+
+  LambdaLogGroup:
+    Type: AWS::Logs::LogGroup
+    DependsOn: LambdaFunction
+    Properties:
+      LogGroupName: !Ref LambdaLogGroupName
+      RetentionInDays: 30
