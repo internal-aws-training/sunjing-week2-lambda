@@ -17,3 +17,15 @@ The cloudformation template is `template-for-lambda-copy-from-s3`.
 ```
 deploy/deploy.sh template-for-lambda-copy-from-s3 ${your-stack-name}
 ```
+
+## Advanced
+
+### Lambda invoke another one
+
+The lambda `LambdaOneFunction` can invoke lambda `LambdaTwoFunction`.
+Currently, lambda one invoke lambda two synchronously (RequestResponse).
+If lambda one invoke lambda two asynchronously, add `InvocationType: Event` when invoke.
+
+```
+deploy/deploy.sh template-lambda-invoke-another-one ${your-stack-name}
+```
