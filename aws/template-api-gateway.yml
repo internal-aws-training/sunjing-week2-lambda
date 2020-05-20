@@ -11,14 +11,6 @@ Parameters:
     Type: String
     Default: hello-world-api.zip
     Description: The s3 bucket which contain api lambda code
-  EventLambdaLogGroupName:
-    Type: String
-    Default: hello-world-lambda-log-group
-    Description: The log group for event lambda
-  ApiLambdaLogGroupName:
-    Type: String
-    Default: hello-world-api-lambda-log-group
-    Description: The log group for api lambda
 
 Resources:
   MyEventLambda:
@@ -62,13 +54,6 @@ Resources:
                 Resource:
                   - arn:aws:logs:*:*:log-group:/aws/lambda/*:*
                   - !GetAtt MyDynamoDBTable.Arn
-
-  EventLambdaLogGroup:
-    Type: AWS::Logs::LogGroup
-    DependsOn: MyEventLambda
-    Properties:
-      LogGroupName: !Ref EventLambdaLogGroupName
-      RetentionInDays: 30
 
   MyDynamoDBTable:
     Type: AWS::DynamoDB::Table
@@ -148,13 +133,6 @@ Resources:
                   - arn:aws:logs:*:*:log-group:/aws/lambda/*:*
                   - !GetAtt MyDynamoDBTable.Arn
 
-  ApiLambdaLogGroup:
-    Type: AWS::Logs::LogGroup
-    DependsOn: MyApiLambda
-    Properties:
-      LogGroupName: !Ref ApiLambdaLogGroupName
-      RetentionInDays: 30
-
   MyRestApi:
     Type: AWS::ApiGateway::RestApi
     Properties:
@@ -208,11 +186,19 @@ Resources:
           - StatusCode: 200
             ResponseTemplates: {"application/json": "$input.json('$.body')"}
           - StatusCode: 400
-            SelectionPattern: .*error.*
+            SelectionPattern: .*400.*
             ResponseTemplates: {"application/json": "$input.json('$.body')"}
       MethodResponses:
         - StatusCode: 200
         - StatusCode: 400
+
+  ApiDeployment:
+    DependsOn: ApiGatewayMethod
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      RestApiId: !Ref MyRestApi
+      Description: deploy api to staging
+      StageName: staging
 
   lambdaApiGatewayInvoke:
     Type: AWS::Lambda::Permission
