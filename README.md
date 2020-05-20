@@ -29,3 +29,14 @@ If lambda one invoke lambda two asynchronously, add `InvocationType: Event` when
 ```
 deploy/deploy.sh template-lambda-invoke-another-one ${your-stack-name}
 ```
+
+### Cloudwatch trigger lambda
+
+![img](./doc/cloudwatch-trigger-lambda.png)
+
+The CloudWatch event will trigger lambda by rate 1/min.
+The lambda will read the file from S3 bucket.
+
+```
+deploy/deploy.sh template-cloudwatch-trigger-lambda ${your-stack-name}
+```
