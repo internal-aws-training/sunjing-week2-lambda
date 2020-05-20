@@ -1,24 +1,8 @@
-Parameters:
-  S3BucketNameForLambdaCode:
-    Type: String
-    Default: lambda-code-hello-word
-    Description: The s3 bucket which contain event lambda code
-  S3BucketObjectKeyForEventLambdaCode:
-    Type: String
-    Default: hello-world-event.zip
-    Description: The s3 bucket which contain lambda code
-  S3BucketObjectKeyForApiLambdaCode:
-    Type: String
-    Default: hello-world-api.zip
-    Description: The s3 bucket which contain api lambda code
-
 Resources:
   MyEventLambda:
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket: !Ref S3BucketNameForLambdaCode
-        S3Key: !Ref S3BucketObjectKeyForEventLambdaCode
+      Code: ../event-lambda
       Handler: "index.handler"
       Role:  !GetAtt EventLambdaExecutionRole.Arn
       Runtime: "nodejs12.x"
@@ -96,9 +80,7 @@ Resources:
   MyApiLambda:
     Type: AWS::Lambda::Function
     Properties:
-      Code:
-        S3Bucket: !Ref S3BucketNameForLambdaCode
-        S3Key: !Ref S3BucketObjectKeyForApiLambdaCode
+      Code: ../api-lambda
       Handler: "index.handler"
       Role:  !GetAtt ApiLambdaExecutionRole.Arn
       Runtime: "nodejs12.x"

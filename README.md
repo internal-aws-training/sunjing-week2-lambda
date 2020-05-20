@@ -40,3 +40,25 @@ The lambda will read the file from S3 bucket.
 ```
 deploy/deploy.sh template-cloudwatch-trigger-lambda ${your-stack-name}
 ```
+
+### Lambda consumer message from SNS
+
+See the section below.
+
+## Proficient
+
+![img](./doc/api-gateway-invoke-lambda.png)
+
+SNS will trigger a lambda to put item to DynamoDB. This lambda can only put item.
+The message which is published by SNS must contain `id` and `label`.
+The `id` indicate user is, label is a string, like: "green".
+
+You can get item from DynamoDB by access api gateway.
+
+step1:
+```
+deploy/deploy-api.sh
+```
+
+step2:
+copy the command from deploy-api.sh, line 18-22 to deploy.
